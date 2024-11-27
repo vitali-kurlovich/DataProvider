@@ -7,7 +7,9 @@
 
 import Foundation
 
-public struct JsonDecodingParametredProvider<Params, Result: Decodable, Provider: ParametredDataProvider>: ParametredDataProvider
+public struct JsonDecodingParametredProvider<Params,
+    Result: Decodable & Sendable,
+    Provider: ParametredDataProvider>: ParametredDataProvider, Sendable
     where Provider.Params == Params, Provider.Result == Data, Provider.ProviderError == DataProviderError
 {
     public typealias ProviderError = DataProviderError

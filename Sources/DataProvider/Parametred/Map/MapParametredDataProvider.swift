@@ -5,14 +5,14 @@
 //  Created by Vitali Kurlovich on 14.11.24.
 //
 
-public struct MapParametredDataProvider<Provider: ParametredDataProvider, Result>: ParametredDataProvider {
+public struct MapParametredDataProvider<Provider: ParametredDataProvider, Result: Sendable>: ParametredDataProvider {
     public typealias Params = Provider.Params
     public typealias ProviderError = Provider.ProviderError
 
     let provider: Provider
-    let convertResult: (Provider.Result) -> Result
+    let convertResult: @Sendable (Provider.Result) -> Result
 
-    public init(provider: Provider, convertResult: @escaping (Provider.Result) -> Result) {
+    public init(provider: Provider, convertResult: @Sendable @escaping (Provider.Result) -> Result) {
         self.provider = provider
         self.convertResult = convertResult
     }
@@ -24,7 +24,7 @@ public struct MapParametredDataProvider<Provider: ParametredDataProvider, Result
 }
 
 public extension ParametredDataProvider {
-    func map<TargetResult>(_ convertResult: @escaping (Self.Result) -> TargetResult) -> MapParametredDataProvider<Self, TargetResult> {
+    func map<TargetResult>(_ convertResult: @Sendable @escaping (Self.Result) -> TargetResult) -> MapParametredDataProvider<Self, TargetResult> {
         .init(provider: self, convertResult: convertResult)
     }
 }

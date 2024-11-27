@@ -8,7 +8,7 @@
 import Foundation
 import HTTPTypes
 
-public enum DataProviderErrorKind {
+public enum DataProviderErrorKind: Sendable {
     case anyError(any Error)
     /// The status code is outside the range of 100...599.
     case invalid
@@ -22,7 +22,7 @@ public enum DataProviderErrorKind {
     case unknown
 }
 
-public protocol DataProviderErrorProtocol: Error {
+public protocol DataProviderErrorProtocol: Error, Sendable {
     var error: (any Error)? { get }
     var status: HTTPResponse.Status? { get }
     var data: Data? { get }
@@ -56,7 +56,7 @@ public extension DataProviderErrorProtocol {
     }
 }
 
-public struct DataProviderError: DataProviderErrorProtocol {
+public struct DataProviderError: DataProviderErrorProtocol, Sendable {
     public let error: (any Error)?
 
     public let status: HTTPResponse.Status?

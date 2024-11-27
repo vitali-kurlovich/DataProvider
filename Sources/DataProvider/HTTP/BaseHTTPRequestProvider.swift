@@ -8,7 +8,7 @@
 import Foundation
 import HTTPTypes
 
-public struct BaseHTTPRequestProvider: HTTPRequestProvider {
+public struct BaseHTTPRequestProvider: HTTPRequestProvider, Sendable {
     public let baseURL: URL
     public let method: HTTPRequest.Method
     public let headerFields: HTTPFields

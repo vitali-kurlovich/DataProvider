@@ -5,7 +5,7 @@
 //  Created by Vitali Kurlovich on 21.11.24.
 //
 
-public struct ParamsReducer<Provider: ParametredDataProvider>: DataProvider {
+public struct ParamsReducer<Provider: ParametredDataProvider>: DataProvider, Sendable {
     public typealias ProviderError = Provider.ProviderError
     public typealias Result = Provider.Result
 
