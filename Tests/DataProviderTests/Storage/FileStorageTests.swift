@@ -17,7 +17,7 @@ import Testing
     let data = Data("Hello".utf8)
     try await storage.write(fileName, data: data)
 
-    let readData = try await storage.read(fileName) 
+    let readData = try await storage.read(fileName)
 
     let string = String(decoding: readData, as: UTF8.self)
 

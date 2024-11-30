@@ -10,12 +10,11 @@ import Foundation
 import Testing
 
 @Test func objectStorage() async throws {
-    
     struct Object: Codable, Equatable {
         let int: Int
         let string: String
     }
-    
+
     let fileStorage = FileStorage()
     let fileName = "Test/\(UUID().uuidString).json"
 

@@ -7,7 +7,8 @@
 
 import Foundation
 
-public struct FileStorage: Sendable, ParametredDataStorage {
+public
+struct FileStorage: Sendable, ParametredDataStorage {
     public typealias Params = String
     public typealias Stored = Data
 
