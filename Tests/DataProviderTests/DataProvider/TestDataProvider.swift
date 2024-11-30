@@ -7,7 +7,7 @@
 
 @testable import DataProvider
 
-struct TestDataProvider<Result, ProviderError: Error>: DataProvider {
+struct TestDataProvider<Result: Sendable, ProviderError: Error>: DataProvider {
     let result: Result
     let error: ProviderError?
 

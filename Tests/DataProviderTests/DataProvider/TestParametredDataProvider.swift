@@ -7,7 +7,7 @@
 
 @testable import DataProvider
 
-struct TestParametredDataProvider<Params, ProviderError: Error>: ParametredDataProvider {
+struct TestParametredDataProvider<Params: Sendable, ProviderError: Error>: ParametredDataProvider {
     typealias Result = Params
     let error: ProviderError?
 
