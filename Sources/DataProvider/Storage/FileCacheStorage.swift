@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 public
 struct FileCacheStorage: Sendable, ParametredDataStorage {
@@ -20,13 +21,17 @@ struct FileCacheStorage: Sendable, ParametredDataStorage {
     public init(cachePath: String,
                 searchPathDirectory: FileManager.SearchPathDirectory = .cachesDirectory,
                 readingOptions: Data.ReadingOptions = [],
-                writingOptions: Data.WritingOptions = [.atomic])
+                writingOptions: Data.WritingOptions = [.atomic],
+                logger: Logger? = nil,
+                signposter: OSSignposter? = nil)
     {
         self.cachePath = cachePath
         fileStorage = FileStorage(
             searchPathDirectory: searchPathDirectory,
             readingOptions: readingOptions,
-            writingOptions: writingOptions
+            writingOptions: writingOptions,
+            logger: logger,
+            signposter: signposter
         )
     }
 

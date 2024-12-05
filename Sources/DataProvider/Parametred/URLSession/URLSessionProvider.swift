@@ -36,6 +36,8 @@ public struct URLSessionProvider: ParametredDataProvider {
             }
 
             logger?.info("\(params.debugDescription)")
+            logger?.debug("\(params.headerFields.debugDescription)")
+
             let (data, response) = try await urlSession.data(for: params)
             logger?.info("\(response.debugDescription)")
             logger?.debug("\(String(decoding: data, as: UTF8.self))")
