@@ -10,8 +10,9 @@ import HTTPTypes
 import HTTPTypesFoundation
 
 public struct RefererURLSessionProviderPlugin: URLSessionProviderPlugin {
+    public init() {}
+
     public func prepare(_ request: HTTPTypes.HTTPRequest) -> HTTPTypes.HTTPRequest {
-        
         if request.headerFields.contains(.referer) {
             return request
         }
