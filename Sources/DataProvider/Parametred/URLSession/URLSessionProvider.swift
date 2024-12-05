@@ -10,6 +10,10 @@ import HTTPTypes
 import HTTPTypesFoundation
 import OSLog
 
+public protocol URLSessionProviderPlugin: Sendable {
+    func prepare(_ request: HTTPRequest) -> HTTPRequest
+}
+
 public struct URLSessionProvider: ParametredDataProvider {
     public typealias Result = (Data, HTTPResponse)
     public typealias Params = HTTPRequest
@@ -21,14 +25,27 @@ public struct URLSessionProvider: ParametredDataProvider {
 
     let signposter: OSSignposter?
 
-    public init(urlSession: URLSession = .shared, logger: Logger? = nil, signposter: OSSignposter? = nil) {
+    let plugins: [any URLSessionProviderPlugin]
+
+    public init(urlSession: URLSession = .shared,
+                plugins: [any URLSessionProviderPlugin] = [],
+                logger: Logger? = nil,
+                signposter: OSSignposter? = nil)
+    {
         self.urlSession = urlSession
+        self.plugins = plugins
         self.logger = logger
         self.signposter = signposter
     }
 
     public func fetch(_ params: Params) async throws(ProviderError) -> Result {
         do {
+            var params = params
+
+            for plugin in plugins {
+                params = plugin.prepare(params)
+            }
+
             let state = signpostBeginRequest()
 
             defer {
