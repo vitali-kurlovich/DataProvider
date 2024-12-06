@@ -13,6 +13,9 @@ public protocol ParametredDataStorage<Params, Stored, StorageError>: Sendable {
     associatedtype StorageError: Error
 
     func isExists(_ params: Params) async -> Bool
+
     func read(_ params: Params) async throws(StorageError) -> Stored
     func write(_ params: Params, data: Stored) async throws(StorageError)
+
+    func delete(_ params: Params) async throws(StorageError)
 }

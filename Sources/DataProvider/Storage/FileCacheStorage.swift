@@ -46,6 +46,14 @@ struct FileCacheStorage: Sendable, ParametredDataStorage {
     public func write(_ params: Params, data: Data) async throws(StorageError) {
         try await fileStorage.write(path(params), data: data)
     }
+
+    public func delete(_ params: String) async throws(FileStorage.StorageError) {
+        try await fileStorage.delete(params)
+    }
+    
+    public func attributes(_ params: Params) async throws(StorageError) -> FileAttributes {
+        try await fileStorage.attributes(params)
+    }
 }
 
 private
