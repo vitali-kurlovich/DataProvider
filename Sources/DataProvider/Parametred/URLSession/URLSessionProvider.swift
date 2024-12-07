@@ -52,27 +52,26 @@ public struct URLSessionProvider: ParametredDataProvider {
                 signpostEndRequest(state: state)
             }
 
-            logger?.info("\(params.debugDescription)")
-            logger?.debug("\(params.headerFields.debugDescription)")
+            logger?.logRequest(params)
 
             let (data, response) = try await urlSession.data(for: params)
-            logger?.info("\(response.debugDescription)")
-            logger?.debug("\(String(decoding: data, as: UTF8.self))")
-
+            logger?.logResponse(response)
+            logger?.logData(data)
+           
             let status = response.status
             switch status.kind {
             case .informational, .successful, .redirection:
                 break
             case .invalid, .clientError, .serverError:
                 let error = DataProviderError(status: status, data: data)
-                logger?.error("\(error.localizedDescription)")
+                logger?.logError(error)
                 throw error
             }
 
             return (data, response)
 
         } catch {
-            logger?.error("\(error.localizedDescription)")
+            logger?.logError(error)
             throw DataProviderError(error: error)
         }
     }
