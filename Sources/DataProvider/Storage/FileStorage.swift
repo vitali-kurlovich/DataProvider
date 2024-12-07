@@ -20,6 +20,12 @@ public struct FileAttributes: Hashable, Sendable {
     }
 }
 
+extension FileAttributes: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "{ creationDate: \(creationDate), modificationDate: \(modificationDate), fileSize: \(fileSize) }"
+    }
+}
+
 public
 struct FileStorage: Sendable, ParametredDataStorage {
     public typealias Params = String
@@ -68,18 +74,29 @@ struct FileStorage: Sendable, ParametredDataStorage {
         let url = try fileUrl(params)
         do {
             logger?.info("Read from: \(url)")
+
+            let state = signpostBeginRead()
+
+            defer {
+                signpostEndRead(state: state)
+            }
+
             let data = try Data(contentsOf: url, options: readingOptions)
-            logger?.info("Read \(data.count) bytes")
+            logger?.debug("Read \(data.count) bytes")
 
             if let compressionAlgorithm {
-                logger?.info("Decompress using: \(compressionAlgorithm.debugDescription)")
+                logger?.debug("Decompress using: \(compressionAlgorithm.debugDescription)")
+
+                let state = signpostBeginDecompress()
 
                 let mutableData = NSMutableData(data: data)
 
                 try mutableData.decompress(using: compressionAlgorithm)
                 let data = mutableData as Data
 
-                logger?.info("Decompressed size \(data.count) bytes")
+                signpostEndDecompress(state: state)
+
+                logger?.debug("Decompressed size \(data.count) bytes")
                 logger?.logData(data)
 
                 return data
@@ -101,24 +118,40 @@ struct FileStorage: Sendable, ParametredDataStorage {
         let folderPath = url.deletingLastPathComponent()
 
         do {
+            let state = signpostBeginWrite()
+
+            defer {
+                signpostEndWrite(state: state)
+            }
+
             if !FileManager.default.fileExists(atPath: folderPath.path()) {
                 try FileManager.default.createDirectory(atPath: folderPath.path(), withIntermediateDirectories: true)
             }
 
             if let compressionAlgorithm {
-                logger?.info("Compress using: \(compressionAlgorithm.debugDescription)")
-                
+                logger?.debug("Compress using: \(compressionAlgorithm.debugDescription)")
+
+                let state = signpostBeginCompress()
+
                 let mutableData = NSMutableData(data: data)
                 try mutableData.compress(using: compressionAlgorithm)
-                
+
                 let compressedData = mutableData as Data
-                
-                logger?.info("Source size \(data.count), compressed size \(compressedData.count) bytes.")
-                try write(to: url, data: data)
+
+                signpostEndCompress(state: state)
+
+                logger?.debug("Source size \(data.count), compressed size \(compressedData.count) bytes.")
+
+                try write(to: url, data: compressedData)
+
+                logger?.debug("Original data")
+                logger?.logData(data)
+
             } else {
                 try write(to: url, data: data)
+                logger?.logData(data)
             }
-            
+
         } catch {
             let error = StorageError.writingError(error)
             logger?.logError(error)
@@ -129,6 +162,7 @@ struct FileStorage: Sendable, ParametredDataStorage {
     public func delete(_ params: String) async throws(StorageError) {
         let url = try fileUrl(params)
         do {
+            logger?.debug("Delete item: \(url)")
             try FileManager.default.removeItem(at: url)
         } catch {
             let error = StorageError.deletingError(error)
@@ -140,15 +174,20 @@ struct FileStorage: Sendable, ParametredDataStorage {
     public func attributes(_ params: Params) async throws(StorageError) -> FileAttributes {
         let url = try fileUrl(params)
         do {
+            logger?.debug("Read file attributes: \(url)")
             let attrs = try FileManager.default.attributesOfItem(atPath: url.path())
 
             let creationDate = attrs[.creationDate] as! Date
             let modificationDate = attrs[.modificationDate] as! Date
             let fileSize = attrs[.size] as! Int
 
-            return FileAttributes(creationDate: creationDate,
-                                  modificationDate: modificationDate,
-                                  fileSize: UInt(fileSize))
+            let fileAttributes = FileAttributes(creationDate: creationDate,
+                                                modificationDate: modificationDate,
+                                                fileSize: UInt(fileSize))
+
+            logger?.debug("File attributes: \(fileAttributes.debugDescription) for \(url)")
+
+            return fileAttributes
 
         } catch {
             let error = StorageError.anyError(error)
@@ -164,10 +203,9 @@ extension FileStorage {
         try data.write(to: url, options: writingOptions)
 
         guard let logger else { return }
-        
+
         logger.info("Write to: \(url)")
-        logger.info("Write \(data.count) bytes")
-        logger.logData(data)
+        logger.debug("Write \(data.count) bytes")
     }
 }
 
@@ -187,8 +225,55 @@ extension FileStorage {
 
         return url
     }
-    
-   
 }
 
+private
+extension FileStorage {
+    func signpostBeginRead() -> OSSignpostIntervalState? {
+        guard let signposter else { return nil }
+        let signpostID = signposter.makeSignpostID()
+        return signposter.beginInterval("Read", id: signpostID)
+    }
 
+    func signpostEndRead(state: OSSignpostIntervalState?) {
+        guard let signposter, let state else { return }
+        signposter.emitEvent("Read complete.")
+        signposter.endInterval("Read", state)
+    }
+
+    func signpostBeginWrite() -> OSSignpostIntervalState? {
+        guard let signposter else { return nil }
+        let signpostID = signposter.makeSignpostID()
+        return signposter.beginInterval("Write", id: signpostID)
+    }
+
+    func signpostEndWrite(state: OSSignpostIntervalState?) {
+        guard let signposter, let state else { return }
+        signposter.emitEvent("Write complete.")
+        signposter.endInterval("Write", state)
+    }
+
+    func signpostBeginCompress() -> OSSignpostIntervalState? {
+        guard let signposter else { return nil }
+        let signpostID = signposter.makeSignpostID()
+        return signposter.beginInterval("Compress", id: signpostID)
+    }
+
+    func signpostEndCompress(state: OSSignpostIntervalState?) {
+        guard let signposter, let state else { return }
+        signposter.emitEvent("Compress complete.")
+        signposter.endInterval("Compress", state)
+    }
+
+    func signpostBeginDecompress() -> OSSignpostIntervalState? {
+        guard let signposter else { return nil }
+        let signpostID = signposter.makeSignpostID()
+        return signposter.beginInterval("Decompress", id: signpostID)
+    }
+
+    func signpostEndDecompress(state: OSSignpostIntervalState?) {
+        guard let signposter, let state else { return }
+        signposter.emitEvent("Decompress complete.")
+        signposter.endInterval("Decompress", state)
+    }
+}

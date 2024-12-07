@@ -7,8 +7,8 @@
 
 import DataProvider
 import Foundation
-import Testing
 import OSLog
+import Testing
 
 @Test func objectStorage() async throws {
     struct Object: Codable, Equatable {
@@ -17,7 +17,7 @@ import OSLog
     }
 
     let logger = Logger(subsystem: "objectStorage", category: "Filesystem")
-    
+
     let fileStorage = FileStorage(logger: logger)
     let fileName = "Test/\(UUID().uuidString).json"
 

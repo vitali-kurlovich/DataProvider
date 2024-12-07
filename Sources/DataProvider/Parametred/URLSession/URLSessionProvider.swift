@@ -57,7 +57,7 @@ public struct URLSessionProvider: ParametredDataProvider {
             let (data, response) = try await urlSession.data(for: params)
             logger?.logResponse(response)
             logger?.logData(data)
-           
+
             let status = response.status
             switch status.kind {
             case .informational, .successful, .redirection:
