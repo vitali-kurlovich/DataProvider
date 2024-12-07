@@ -33,22 +33,28 @@ struct FileStorage: Sendable, ParametredDataStorage {
         case incorrectFilePath
     }
 
-    let searchPathDirectory: FileManager.SearchPathDirectory
-    let readingOptions: Data.ReadingOptions
-    let writingOptions: Data.WritingOptions
+    public let searchPathDirectory: FileManager.SearchPathDirectory
+    public let readingOptions: Data.ReadingOptions
+    public let writingOptions: Data.WritingOptions
 
-    let logger: Logger?
-    let signposter: OSSignposter?
+    public let compressionAlgorithm: NSData.CompressionAlgorithm?
+
+    public let logger: Logger?
+    public let signposter: OSSignposter?
 
     public init(searchPathDirectory: FileManager.SearchPathDirectory = .cachesDirectory,
                 readingOptions: Data.ReadingOptions = [],
                 writingOptions: Data.WritingOptions = [.atomic],
+                compressionAlgorithm: NSData.CompressionAlgorithm? = nil,
                 logger: Logger? = nil,
                 signposter: OSSignposter? = nil)
     {
         self.searchPathDirectory = searchPathDirectory
         self.readingOptions = readingOptions
         self.writingOptions = writingOptions
+
+        self.compressionAlgorithm = compressionAlgorithm
+
         self.logger = logger
         self.signposter = signposter
     }
@@ -63,12 +69,28 @@ struct FileStorage: Sendable, ParametredDataStorage {
         do {
             logger?.info("Read from: \(url)")
             let data = try Data(contentsOf: url, options: readingOptions)
-            logger?.debug("\(String(decoding: data, as: UTF8.self))")
+            logger?.info("Read \(data.count) bytes")
+
+            if let compressionAlgorithm {
+                logger?.info("Decompress using: \(compressionAlgorithm.debugDescription)")
+
+                let mutableData = NSMutableData(data: data)
+
+                try mutableData.decompress(using: compressionAlgorithm)
+                let data = mutableData as Data
+
+                logger?.info("Decompressed size \(data.count) bytes")
+                logger?.logData(data)
+
+                return data
+            }
+
+            logger?.logData(data)
 
             return data
         } catch {
             let error = StorageError.readingError(error)
-            logger?.error("\(error.localizedDescription)")
+            logger?.logError(error)
             throw error
         }
     }
@@ -83,13 +105,23 @@ struct FileStorage: Sendable, ParametredDataStorage {
                 try FileManager.default.createDirectory(atPath: folderPath.path(), withIntermediateDirectories: true)
             }
 
-            try data.write(to: url, options: writingOptions)
-            logger?.info("Write to: \(url)")
-            logger?.debug("\(String(decoding: data, as: UTF8.self))")
-
+            if let compressionAlgorithm {
+                logger?.info("Compress using: \(compressionAlgorithm.debugDescription)")
+                
+                let mutableData = NSMutableData(data: data)
+                try mutableData.compress(using: compressionAlgorithm)
+                
+                let compressedData = mutableData as Data
+                
+                logger?.info("Source size \(data.count), compressed size \(compressedData.count) bytes.")
+                try write(to: url, data: data)
+            } else {
+                try write(to: url, data: data)
+            }
+            
         } catch {
             let error = StorageError.writingError(error)
-            logger?.error("\(error.localizedDescription)")
+            logger?.logError(error)
             throw error
         }
     }
@@ -100,7 +132,7 @@ struct FileStorage: Sendable, ParametredDataStorage {
             try FileManager.default.removeItem(at: url)
         } catch {
             let error = StorageError.deletingError(error)
-            logger?.error("\(error.localizedDescription)")
+            logger?.logError(error)
             throw error
         }
     }
@@ -120,9 +152,22 @@ struct FileStorage: Sendable, ParametredDataStorage {
 
         } catch {
             let error = StorageError.anyError(error)
-            logger?.error("\(error.localizedDescription)")
+            logger?.logError(error)
             throw error
         }
+    }
+}
+
+private
+extension FileStorage {
+    func write(to url: URL, data: Data) throws {
+        try data.write(to: url, options: writingOptions)
+
+        guard let logger else { return }
+        
+        logger.info("Write to: \(url)")
+        logger.info("Write \(data.count) bytes")
+        logger.logData(data)
     }
 }
 
@@ -136,10 +181,14 @@ extension FileStorage {
     func fileUrl(_ params: Params) throws(StorageError) -> URL {
         guard let url = filePath(params) else {
             let error = StorageError.incorrectFilePath
-            logger?.error("\(error.localizedDescription)")
+            logger?.logError(error)
             throw error
         }
 
         return url
     }
+    
+   
 }
+
+
