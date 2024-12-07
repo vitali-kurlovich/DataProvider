@@ -20,12 +20,11 @@ public struct URLSessionProvider: ParametredDataProvider {
 
     public typealias ProviderError = DataProviderError
 
-    let urlSession: URLSession
+    public let urlSession: URLSession
+    public let plugins: [any URLSessionProviderPlugin]
+
     let logger: Logger?
-
     let signposter: OSSignposter?
-
-    let plugins: [any URLSessionProviderPlugin]
 
     public init(urlSession: URLSession = .shared,
                 plugins: [any URLSessionProviderPlugin] = [],
@@ -71,8 +70,9 @@ public struct URLSessionProvider: ParametredDataProvider {
             return (data, response)
 
         } catch {
+            let error = DataProviderError(error: error)
             logger?.logError(error)
-            throw DataProviderError(error: error)
+            throw error
         }
     }
 }
